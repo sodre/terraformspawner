@@ -1,0 +1,7 @@
+[report]
+omit =
+    setup.py
+    terraformspawner/__main__.py
+    terraformspawner/_version.py
+    versioneer.py
+    tests/*
