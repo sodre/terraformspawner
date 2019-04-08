@@ -19,7 +19,7 @@ class TerraformSpawner(Spawner):
         """
     ).tag(config=True)
 
-    tf_module = Unicode('/Users/sodre/git/sodre/terraform-null-jupyterhub-singleuser',
+    tf_module = Unicode('sodre/jupyterhub-singleuser/null',
         help="""
         The Terraform Module name for the Spawner
 
@@ -40,7 +40,7 @@ class TerraformSpawner(Spawner):
         self._create_module()
 
         # terraform apply
-        self.tf_apply()
+        yield self.tf_apply()
 
         # Get state from terraform
         ip = self.tf_output('ip')
@@ -71,7 +71,9 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        self.tf_apply()
+        yield self.tf_apply()
+
+        # Get state from terraform
         state = self.tf_output('state')
 
         return int(state) if state != "" else None
@@ -82,6 +84,7 @@ class TerraformSpawner(Spawner):
     def get_module_file(self):
         return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
 
+    @gen.coroutine
     def tf_apply(self):
         module_id = self.get_module_id()
 
