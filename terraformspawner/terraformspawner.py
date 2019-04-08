@@ -2,17 +2,30 @@ from tornado import gen
 from subprocess import check_call, check_output
 
 from jupyterhub.spawner import Spawner
-from traitlets import Int
+from traitlets import Int, Unicode
 
 import os
 import json
 
+
 class TerraformSpawner(Spawner):
     """A Spawner for JupyterHub that uses Terraform to run each user's server"""
 
-    tf_dir = '.'
-    tf_module = '/Users/sodre/git/sodre/terraform-null-jupyterhub-singleuser'
+    tf_dir = Unicode(".",
+        help="""
+        Path to location where the terraform files will be generated.
 
+        defaults to current working directory.
+        """
+    ).tag(config=True)
+
+    tf_module = Unicode('/Users/sodre/git/sodre/terraform-null-jupyterhub-singleuser',
+        help="""
+        The Terraform Module name for the Spawner
+
+        defaults to sodre/terraform-null-jupyterhub-singleuser module
+        """
+    ).tag(config=True)
 
     @gen.coroutine
     def start(self):
@@ -35,7 +48,6 @@ class TerraformSpawner(Spawner):
 
         return (ip, port)
 
-
     @gen.coroutine
     def stop(self, now=False):
         """
@@ -45,9 +57,8 @@ class TerraformSpawner(Spawner):
 
         if os.path.exists(module_file):
             check_call(['terraform', 'destroy', '-auto-approve',
-                        '-target', 'module.%s'%module_id], cwd=self.tf_dir)
+                        '-target', 'module.%s' % module_id], cwd=self.tf_dir)
             os.remove(module_file)
-
 
     @gen.coroutine
     def poll(self):
@@ -65,21 +76,17 @@ class TerraformSpawner(Spawner):
 
         return int(state) if state != "" else None
 
-
     def get_module_id(self):
         return self.user.escaped_name
 
-
     def get_module_file(self):
         return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
-
 
     def tf_apply(self):
         module_id = self.get_module_id()
 
         check_call(['terraform', 'apply', '-auto-approve',
                     '-target', 'module.%s'%module_id], cwd=self.tf_dir)
-
 
     def tf_output(self, variable):
         """
