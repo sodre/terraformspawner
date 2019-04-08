@@ -5,14 +5,11 @@ from jupyterhub.spawner import Spawner
 from traitlets import Int
 
 import json
-import pdb
 
 class TerraformSpawner(Spawner):
     """A Spawner for JupyterHub that uses Terraform to run each user's server"""
 
     tf_dir = '/Users/sodre/git/sodre/terraform-null-jupyterhub-singleuser'
-    http_timeout = Int(30)
-    start_timeout = Int(60)
 
     @gen.coroutine
     def start(self):
@@ -21,7 +18,6 @@ class TerraformSpawner(Spawner):
            call terraform apply
         """
 
-        #pdb.set_trace()
         # Create the terraform configuration
         env = self.get_env()
 
@@ -36,12 +32,12 @@ class TerraformSpawner(Spawner):
             cwd=self.tf_dir)
 
         # Get state from terraform
-        self.ip = check_output(['terraform', 'output', 'ip'],
+        ip = check_output(['terraform', 'output', 'ip'],
                           cwd=self.tf_dir).strip().decode('utf-8')
-        self.port = int(check_output(['terraform', 'output', 'port'],
+        port = int(check_output(['terraform', 'output', 'port'],
                             cwd=self.tf_dir).strip().decode('utf-8'))
 
-        return (self.ip, self.port)
+        return (ip, port)
 
     @gen.coroutine
     def stop(self, now=False):
@@ -57,6 +53,13 @@ class TerraformSpawner(Spawner):
         """Check if the single-user process is running
            return None if it is, an exit status (0 if unknown) if it is not.
         """
+        check_call([
+            'terraform',
+            'apply',
+            '-auto-approve',
+            '-var', 'api_token={}'.format(self.api_token)],
+            cwd=self.tf_dir)
+
         state = check_output(['terraform', 'output', 'state'],
                              cwd=self.tf_dir).strip().decode('utf-8')
 
