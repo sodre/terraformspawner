@@ -103,7 +103,6 @@ class TerraformSpawner(Spawner):
 
         module_body = {
           "source" : self.tf_module,
-          "api_token" : self.api_token,
           "env" :  self.get_env(),
         }
 
