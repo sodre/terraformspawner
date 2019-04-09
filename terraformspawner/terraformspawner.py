@@ -39,12 +39,18 @@ class TerraformSpawner(Spawner):
         module_id = self.get_module_id()
         self._create_module()
 
-        # terraform apply
+        # Terraform Apply (locally)
         yield self.tf_apply()
 
-        # Get state from terraform
-        ip = self.tf_output('ip')
-        port = int(self.tf_output('port'))
+        (ip, port) = (None, None)
+        while ip == None or port == None:
+            # Terraform Refresh (globally)
+            yield self.tf_refresh()
+            try:
+                ip = self.tf_output('ip')
+                port = int(self.tf_output('port'))
+            except:
+                pass
 
         return (ip, port)
 
@@ -71,7 +77,7 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        yield self.tf_apply()
+        yield self.tf_refresh()
 
         # Get state from terraform
         state = self.tf_output('state')
@@ -90,6 +96,13 @@ class TerraformSpawner(Spawner):
 
         check_call(['terraform', 'apply', '-auto-approve',
                     '-target', 'module.%s'%module_id], cwd=self.tf_dir)
+
+    @gen.coroutine
+    def tf_refresh(self):
+        module_id = self.get_module_id()
+
+        check_call(['terraform', 'refresh' ], cwd=self.tf_dir)
+
 
     def tf_output(self, variable):
         """
@@ -111,13 +124,13 @@ class TerraformSpawner(Spawner):
         module_id = self.get_module_id()
         module_file = self.get_module_file()
 
-        module_body = {
+        module_body = { module_id : {
           "source" : self.tf_module,
           "env" :  self.get_env(),
-        }
+        }}
 
         with open(module_file, 'w') as f:
-            json.dump({ "module" : { module_id : module_body } }, f)
+            json.dump({ "module" : module_body }, f)
 
         # Reinitialize Terraform
         check_call(['terraform', 'init'], cwd=self.tf_dir)
