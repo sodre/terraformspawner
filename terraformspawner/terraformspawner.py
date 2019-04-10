@@ -2,7 +2,7 @@ from tornado import gen
 from subprocess import check_call, check_output
 
 from jupyterhub.spawner import Spawner
-from traitlets import Int, Unicode
+from traitlets import Unicode
 
 from jinja2 import Environment, PackageLoader
 
@@ -142,5 +142,4 @@ class TerraformSpawner(Spawner):
         module_id = self.get_module_id()
         return check_output(['terraform', 'output', '-module', module_id, variable],
                             cwd=self.tf_dir).strip().decode('utf-8')
-
 

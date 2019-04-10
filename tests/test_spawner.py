@@ -1,4 +1,6 @@
 from unittest.mock import Mock
+import pytest
+import os
 
 from jupyterhub.objects import Hub, Server
 
@@ -14,10 +16,15 @@ class MockUser(Mock):
     def url(self):
         return self.server.url
 
+@pytest.fixture()
+def spawner(tmpdir):
+    rv = TerraformSpawner(hub=Hub(), user=MockUser())
+    rv.tf_dir = tmpdir.dirname
 
-def test__build_tf_module():
-    spawner = TerraformSpawner(hub=Hub(), user=MockUser())
+    return rv
 
+
+def test__build_tf_module(spawner):
     # Configure Spawner
     spawner.tf_module = "sodre/jupyterhub-singleuser/triton"
 
@@ -29,3 +36,14 @@ def test__build_tf_module():
     assert spawner.get_module_id() in module_tf
 
     assert 'JUPYTERHUB_API_TOKEN' in module_tf
+
+
+def test__write_tf_module(spawner):
+    tf_module = spawner._build_tf_module()
+
+    spawner._write_tf_module()
+
+    tf_module_file = os.path.join(spawner.tf_dir, spawner.get_module_file())
+    with open(tf_module_file) as f:
+        assert tf_module == f.read()
+
