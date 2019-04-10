@@ -1,7 +1,7 @@
-from unittest.mock import Mock
-import pytest
 import os
+from unittest.mock import Mock
 
+import pytest
 from jupyterhub.objects import Hub, Server
 
 from terraformspawner import TerraformSpawner
