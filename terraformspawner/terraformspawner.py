@@ -1,12 +1,10 @@
-from tornado import gen
+import os
 from subprocess import check_call, check_output
 
-from jupyterhub.spawner import Spawner
-from traitlets import Unicode
-
 from jinja2 import Environment, PackageLoader
-
-import os
+from jupyterhub.spawner import Spawner
+from tornado import gen
+from traitlets import Unicode
 
 
 class TerraformSpawner(Spawner):

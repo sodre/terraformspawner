@@ -1,7 +1,7 @@
-from unittest.mock import Mock
-import pytest
 import os
+from unittest.mock import Mock
 
+import pytest
 from jupyterhub.objects import Hub, Server
 
 from terraformspawner import TerraformSpawner
@@ -15,6 +15,7 @@ class MockUser(Mock):
     @property
     def url(self):
         return self.server.url
+
 
 @pytest.fixture()
 def spawner(tmpdir):
@@ -46,4 +47,3 @@ def test__write_tf_module(spawner):
     tf_module_file = os.path.join(spawner.tf_dir, spawner.get_module_file())
     with open(tf_module_file) as f:
         assert tf_module == f.read()
-
