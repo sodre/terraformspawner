@@ -3,7 +3,8 @@ from setuptools import setup
 import versioneer
 
 requirements = [
-    "jupyterhub >=0.9.6,<1"
+    'jinja2',
+    "jupyterhub >=0.9.6,<1",
 ]
 
 setup(
