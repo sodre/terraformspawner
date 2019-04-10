@@ -4,11 +4,9 @@ from subprocess import check_call, check_output
 from jupyterhub.spawner import Spawner
 from traitlets import Int, Unicode
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader
 
 import os
-import json
-
 
 
 class TerraformSpawner(Spawner):
@@ -30,7 +28,7 @@ class TerraformSpawner(Spawner):
         """
     ).tag(config=True)
 
-    tf_templates = Environment(
+    tf_jinja_env = Environment(
         loader=PackageLoader("terraformspawner", "templates")
     )
 
@@ -44,8 +42,10 @@ class TerraformSpawner(Spawner):
         """
 
         # create module
-        module_id = self.get_module_id()
-        self._create_module()
+        self._write_module_tf()
+
+        # (Re)Initialize Terraform
+        self.tf_init()
 
         # Terraform Apply (locally)
         yield self.tf_apply()
@@ -60,7 +60,7 @@ class TerraformSpawner(Spawner):
             except:
                 pass
 
-        return (ip, port)
+        return ip, port
 
     @gen.coroutine
     def stop(self, now=False):
@@ -79,9 +79,8 @@ class TerraformSpawner(Spawner):
         """Check if the single-user process is running
            return None if it is, an exit status (0 if unknown) if it is not.
         """
-        module_id = self.get_module_id()
-        module_file = self.get_module_file()
 
+        module_file = self.get_module_file()
         if not os.path.exists(module_file):
             return 0
 
@@ -98,47 +97,50 @@ class TerraformSpawner(Spawner):
     def get_module_file(self):
         return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
 
+    def _write_module_tf(self):
+        """
+        Writes the module.tf file to the tf_dir directory.
+        :return:
+        """
+        module_tf_content = self._build_module_tf()
+        with open(self.get_module_file(), 'w') as f:
+            f.write(module_tf_content)
+
+    def _build_module_tf(self):
+        """
+        Creates a Terraform configuration for this Spawner
+
+        :return: rendered module_tf content
+        """
+        tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
+        return tf_template.render(spawner=self)
+
     @gen.coroutine
     def tf_apply(self):
         module_id = self.get_module_id()
-
         check_call(['terraform', 'apply', '-auto-approve',
                     '-target', 'module.%s'%module_id], cwd=self.tf_dir)
 
     @gen.coroutine
     def tf_refresh(self):
-        module_id = self.get_module_id()
-
         check_call(['terraform', 'refresh' ], cwd=self.tf_dir)
 
+    @gen.coroutine
+    def tf_init(self):
+        """
+        (Re)Initialize Terraform
 
+        :return:
+        """
+        check_call(['terraform', 'init'], cwd=self.tf_dir)
+
+    @gen.coroutine
     def tf_output(self, variable):
         """
            Returns the Terraform variable output for the current module
         """
-
         module_id = self.get_module_id()
         return check_output(['terraform', 'output', '-module', module_id, variable],
                             cwd=self.tf_dir).strip().decode('utf-8')
 
-    def _create_module(self):
-        """
-           Creates a Terraform configuration for this Spawner
 
-           returns the module_id
-        """
-
-        # Create the terraform configuration
-        module_id = self.get_module_id()
-        module_file = self.get_module_file()
-
-        module_body = { module_id : {
-          "source" : self.tf_module,
-          "env" :  self.get_env(),
-        }}
-
-        with open(module_file, 'w') as f:
-            json.dump({ "module" : module_body }, f)
-
-        # Reinitialize Terraform
-        check_call(['terraform', 'init'], cwd=self.tf_dir)
