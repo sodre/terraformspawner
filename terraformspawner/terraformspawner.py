@@ -4,8 +4,11 @@ from subprocess import check_call, check_output
 from jupyterhub.spawner import Spawner
 from traitlets import Int, Unicode
 
+from jinja2 import Environment, PackageLoader, select_autoescape
+
 import os
 import json
+
 
 
 class TerraformSpawner(Spawner):
@@ -26,6 +29,11 @@ class TerraformSpawner(Spawner):
         defaults to sodre/terraform-null-jupyterhub-singleuser module
         """
     ).tag(config=True)
+
+    tf_templates = Environment(
+        loader=PackageLoader("terraformspawner", "templates")
+    )
+
 
     @gen.coroutine
     def start(self):
