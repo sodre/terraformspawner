@@ -2,7 +2,7 @@ from setuptools import setup
 import versioneer
 
 requirements = [
-    # package requirements go here
+    "jupyterhub >=0.9.6,<1"
 ]
 
 setup(
