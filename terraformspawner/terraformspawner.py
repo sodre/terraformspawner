@@ -42,7 +42,7 @@ class TerraformSpawner(Spawner):
         """
 
         # create module
-        self._write_module_tf()
+        self._write_tf_module()
 
         # (Re)Initialize Terraform
         self.tf_init()
@@ -97,16 +97,16 @@ class TerraformSpawner(Spawner):
     def get_module_file(self):
         return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
 
-    def _write_module_tf(self):
+    def _write_tf_module(self):
         """
         Writes the module.tf file to the tf_dir directory.
         :return:
         """
-        module_tf_content = self._build_module_tf()
+        module_tf_content = self._build_tf_module()
         with open(self.get_module_file(), 'w') as f:
             f.write(module_tf_content)
 
-    def _build_module_tf(self):
+    def _build_tf_module(self):
         """
         Creates a Terraform configuration for this Spawner
 

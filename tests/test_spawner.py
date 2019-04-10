@@ -15,14 +15,14 @@ class MockUser(Mock):
         return self.server.url
 
 
-def test_module_tf():
+def test__build_tf_module():
     spawner = TerraformSpawner(hub=Hub(), user=MockUser())
 
     # Configure Spawner
     spawner.tf_module = "sodre/jupyterhub-singleuser/triton"
 
     # Create the module_tf
-    module_tf = spawner._build_module_tf()
+    module_tf = spawner._build_tf_module()
 
     # Check it contains some of the expected data
     assert spawner.tf_module in module_tf
