@@ -16,6 +16,7 @@ setup(
     author_email='sodre@sodre.co',
     url='https://github.com/sodre/terraformspawner',
     packages=['terraformspawner'],
+    package_data={'terraformspawner': ['templates/*']},
     entry_points={
         'console_scripts': [
             'terraformspawner=terraformspawner.cli:cli'
