@@ -8,7 +8,7 @@ requirements = [
 ]
 
 setup(
-    name='terraformspawner',
+    name='jupyterhub-terraformspawner',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="Spawn JupyterHub single-user servers with Terraform",
