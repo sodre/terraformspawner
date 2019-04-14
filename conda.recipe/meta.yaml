@@ -3,23 +3,18 @@
 
 package:
   name: terraformspawner
-  
   version: {{ data['version'] }}
 
 source:
   path: ..
 
 build:
-  # If the installation is complex, or different between Unix and Windows, use
-  # separate bld.bat and build.sh files instead of this key.  Add the line
-  # "skip: True  # [py<35]" (for example) to limit to Python 3.5 and newer, or
-  # "skip: True  # [not win]" to limit to Windows.
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   build:
     - python
-    - setuptools
+    - pip
   run:
     - python
     # dependencies are defined in setup.py
@@ -34,8 +29,9 @@ test:
   requires:
     - pytest
     - pytest-cov
+    - terraform
   commands:
-    - pytest tests
+    - pytest -v --color=yes tests
 
 about:
   home: https://github.com/sodre/terraformspawner
