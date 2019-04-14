@@ -51,15 +51,15 @@ class TerraformSpawner(Spawner):
         self._write_tf_module()
 
         # (Re)Initialize Terraform
-        yield from self.tf_check_call('init')
+        yield self.tf_check_call('init')
 
         # Terraform Apply (locally)
-        yield from self.tf_apply()
+        yield self.tf_apply()
 
         (ip, port) = (None, None)
         while ip is None or port is None:
             # Terraform Refresh (globally)
-            yield from self.tf_check_call('refresh')
+            yield self.tf_check_call('refresh')
             try:
                 ip = self.tf_output('ip')
                 port = int(self.tf_output('port'))
@@ -89,7 +89,7 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        yield from self.tf_check_call('refresh')
+        yield self.tf_check_call('refresh')
 
         # Get state from terraform
         state = self.tf_output('state')
@@ -122,20 +122,20 @@ class TerraformSpawner(Spawner):
 
     @gen.coroutine
     def tf_check_call(self, *args, **kwargs):
-        proc = yield from create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
-        yield from proc.wait()
+        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
+        yield proc.wait()
         if proc.returncode != 0:
             raise CalledProcessError(proc.returncode, self.tf_bin)
 
     @gen.coroutine
     def tf_apply(self):
         module_id = self.get_module_id()
-        yield from self.tf_check_call('apply', '-auto-approve', '-target', 'module.%s' % module_id)
+        yield self.tf_check_call('apply', '-auto-approve', '-target', 'module.%s' % module_id)
 
     @gen.coroutine
     def tf_destroy(self):
         module_id = self.get_module_id()
-        yield from self.tf_check_call('destroy', '-auto-approve', '-target', 'module.%s' % module_id)
+        yield self.tf_check_call('destroy', '-auto-approve', '-target', 'module.%s' % module_id)
 
     def tf_output(self, variable):
         """
