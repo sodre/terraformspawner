@@ -10,6 +10,14 @@ from traitlets import Unicode
 class TerraformSpawner(Spawner):
     """A Spawner for JupyterHub that uses Terraform to run each user's server"""
 
+    tf_bin = Unicode("terraform",
+        help="""
+        The location of the terraform binary.
+        
+        defaults to terraform.
+        """
+    ).tag(config=True)
+
     tf_dir = Unicode(".",
         help="""
         Path to location where the terraform files will be generated.
@@ -30,7 +38,6 @@ class TerraformSpawner(Spawner):
         loader=PackageLoader("terraformspawner", "templates")
     )
 
-
     @gen.coroutine
     def start(self):
         """
@@ -46,12 +53,12 @@ class TerraformSpawner(Spawner):
         self.tf_init()
 
         # Terraform Apply (locally)
-        yield self.tf_apply()
+        self.tf_apply()
 
         (ip, port) = (None, None)
-        while ip == None or port == None:
+        while ip is None or port is None:
             # Terraform Refresh (globally)
-            yield self.tf_refresh()
+            self.tf_refresh()
             try:
                 ip = self.tf_output('ip')
                 port = int(self.tf_output('port'))
@@ -68,7 +75,7 @@ class TerraformSpawner(Spawner):
         module_file = self.get_module_file()
 
         if os.path.exists(module_file):
-            check_call(['terraform', 'destroy', '-auto-approve',
+            check_call([self.tf_bin, 'destroy', '-auto-approve',
                         '-target', 'module.%s' % module_id], cwd=self.tf_dir)
             os.remove(module_file)
 
@@ -82,7 +89,7 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        yield self.tf_refresh()
+        self.tf_refresh()
 
         # Get state from terraform
         state = self.tf_output('state')
@@ -113,31 +120,26 @@ class TerraformSpawner(Spawner):
         tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
         return tf_template.render(spawner=self)
 
-    @gen.coroutine
     def tf_apply(self):
         module_id = self.get_module_id()
-        check_call(['terraform', 'apply', '-auto-approve',
+        check_call([self.tf_bin, 'apply', '-auto-approve',
                     '-target', 'module.%s'%module_id], cwd=self.tf_dir)
 
-    @gen.coroutine
     def tf_refresh(self):
-        check_call(['terraform', 'refresh' ], cwd=self.tf_dir)
+        check_call([self.tf_bin, 'refresh' ], cwd=self.tf_dir)
 
-    @gen.coroutine
     def tf_init(self):
         """
         (Re)Initialize Terraform
 
         :return:
         """
-        check_call(['terraform', 'init'], cwd=self.tf_dir)
+        check_call([self.tf_bin, 'init'], cwd=self.tf_dir)
 
-    @gen.coroutine
     def tf_output(self, variable):
         """
            Returns the Terraform variable output for the current module
         """
         module_id = self.get_module_id()
-        return check_output(['terraform', 'output', '-module', module_id, variable],
+        return check_output([self.tf_bin, 'output', '-module', module_id, variable],
                             cwd=self.tf_dir).strip().decode('utf-8')
-
