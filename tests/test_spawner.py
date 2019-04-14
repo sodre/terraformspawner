@@ -1,5 +1,6 @@
 import os
 import sys
+from subprocess import CalledProcessError
 from unittest.mock import Mock
 
 import pytest
@@ -49,6 +50,13 @@ def test__write_tf_module(spawner):
 
     with open(spawner.get_module_file()) as f:
         assert tf_module == f.read()
+
+@pytest.mark.asyncio
+def test_tf_check_call(spawner):
+    yield from spawner.tf_check_call('-help')
+
+    with pytest.raises(CalledProcessError):
+        yield from spawner.tf_check_call('does-not-exist')
 
 
 @pytest.mark.asyncio
