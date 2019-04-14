@@ -1,5 +1,6 @@
 import os
-from subprocess import check_call, check_output
+from asyncio.subprocess import create_subprocess_exec
+from subprocess import check_output, CalledProcessError
 
 from jinja2 import Environment, PackageLoader
 from jupyterhub.spawner import Spawner
@@ -50,15 +51,15 @@ class TerraformSpawner(Spawner):
         self._write_tf_module()
 
         # (Re)Initialize Terraform
-        self.tf_init()
+        yield self.tf_check_call('init')
 
         # Terraform Apply (locally)
-        self.tf_apply()
+        yield self.tf_apply()
 
         (ip, port) = (None, None)
         while ip is None or port is None:
             # Terraform Refresh (globally)
-            self.tf_refresh()
+            yield self.tf_check_call('refresh')
             try:
                 ip = self.tf_output('ip')
                 port = int(self.tf_output('port'))
@@ -75,8 +76,7 @@ class TerraformSpawner(Spawner):
         module_file = self.get_module_file()
 
         if os.path.exists(module_file):
-            check_call([self.tf_bin, 'destroy', '-auto-approve',
-                        '-target', 'module.%s' % module_id], cwd=self.tf_dir)
+            self.tf_destroy()
             os.remove(module_file)
 
     @gen.coroutine
@@ -89,7 +89,7 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        self.tf_refresh()
+        yield self.tf_check_call('refresh')
 
         # Get state from terraform
         state = self.tf_output('state')
@@ -120,21 +120,22 @@ class TerraformSpawner(Spawner):
         tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
         return tf_template.render(spawner=self)
 
+    @gen.coroutine
+    def tf_check_call(self, *args, **kwargs):
+        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
+        yield proc.wait()
+        if proc.returncode != 0:
+            raise CalledProcessError(proc.returncode, self.tf_bin)
+
+    @gen.coroutine
     def tf_apply(self):
         module_id = self.get_module_id()
-        check_call([self.tf_bin, 'apply', '-auto-approve',
-                    '-target', 'module.%s'%module_id], cwd=self.tf_dir)
+        yield self.tf_check_call('apply', '-auto-approve', '-target', 'module.%s' % module_id)
 
-    def tf_refresh(self):
-        check_call([self.tf_bin, 'refresh' ], cwd=self.tf_dir)
-
-    def tf_init(self):
-        """
-        (Re)Initialize Terraform
-
-        :return:
-        """
-        check_call([self.tf_bin, 'init'], cwd=self.tf_dir)
+    @gen.coroutine
+    def tf_destroy(self):
+        module_id = self.get_module_id()
+        yield self.tf_check_call('destroy', '-auto-approve', '-target', 'module.%s' % module_id)
 
     def tf_output(self, variable):
         """
