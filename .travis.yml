@@ -17,7 +17,7 @@ install:
   - conda update -q conda
   - conda install conda-build anaconda-client pytest pytest-cov
   - conda config --set auto_update_conda no
-  - conda build conda.recipe --no-test
+  - conda build -c defaults -c conda-forge conda.recipe --no-test
   - conda install --use-local terraformspawner
   - conda info -a
 script:

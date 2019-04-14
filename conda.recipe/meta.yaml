@@ -17,6 +17,7 @@ requirements:
     - pip
   run:
     - python
+    - terraform
     # dependencies are defined in setup.py
     {% for dep in data['install_requires'] %}
     - {{ dep.lower() }}
@@ -29,7 +30,6 @@ test:
   requires:
     - pytest
     - pytest-cov
-    - terraform
   commands:
     - pytest -v --color=yes tests
 
