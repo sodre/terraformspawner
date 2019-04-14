@@ -89,7 +89,7 @@ class TerraformSpawner(Spawner):
         if not os.path.exists(module_file):
             return 0
 
-        yield self.tf_refresh()
+        self.tf_refresh()
 
         # Get state from terraform
         state = self.tf_output('state')

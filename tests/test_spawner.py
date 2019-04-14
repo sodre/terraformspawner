@@ -23,6 +23,7 @@ def spawner(tmpdir):
     rv = TerraformSpawner(hub=Hub(), user=MockUser())
     rv.tf_bin = os.path.join(sys.base_exec_prefix, 'bin', 'terraform')
     rv.tf_dir = tmpdir.dirname
+    rv.tf_module = os.path.join(os.path.dirname(__file__), "terraform-mock-jupyterhub-singleuser")
 
     return rv
 
@@ -51,8 +52,6 @@ def test__write_tf_module(spawner):
 
 
 def test_start(spawner):
-    spawner.tf_module = os.path.join(os.path.dirname(__file__), "terraform-mock-jupyterhub-singleuser")
-
     f = spawner.start()
 
     assert f.done()
@@ -64,7 +63,6 @@ def test_start(spawner):
 
 
 def test_stop(spawner):
-    spawner.tf_module = os.path.join(os.path.dirname(__file__), "terraform-mock-jupyterhub-singleuser")
     spawner.start().result()
 
     assert os.path.exists(spawner.get_module_file())
@@ -75,4 +73,13 @@ def test_stop(spawner):
 
 
 def test_poll(spawner):
-    pass
+    # If poll is called before start, the state is unknown
+    state = spawner.poll().result()
+    assert state == 0
+
+    # Now we actually start it
+    spawner.start().result()
+
+    state = spawner.poll().result()
+
+    assert state is None
