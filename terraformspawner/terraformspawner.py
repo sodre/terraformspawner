@@ -56,7 +56,7 @@ class TerraformSpawner(Spawner):
         self.tf_apply()
 
         (ip, port) = (None, None)
-        while ip == None or port == None:
+        while ip is None or port is None:
             # Terraform Refresh (globally)
             self.tf_refresh()
             try:

@@ -10,7 +10,7 @@ from terraformspawner import TerraformSpawner
 
 class MockUser(Mock):
     name = 'myname'
-    escaped_name = "myname"
+    escaped_name = 'myname'
     server = Server()
 
     @property
@@ -23,14 +23,14 @@ def spawner(tmpdir):
     rv = TerraformSpawner(hub=Hub(), user=MockUser())
     rv.tf_bin = os.path.join(sys.base_exec_prefix, 'bin', 'terraform')
     rv.tf_dir = tmpdir.dirname
-    rv.tf_module = os.path.join(os.path.dirname(__file__), "terraform-mock-jupyterhub-singleuser")
+    rv.tf_module = os.path.join(os.path.dirname(__file__), 'terraform-mock-jupyterhub-singleuser')
 
     return rv
 
 
 def test__build_tf_module(spawner):
     # Configure Spawner
-    spawner.tf_module = "sodre/jupyterhub-singleuser/triton"
+    spawner.tf_module = 'sodre/jupyterhub-singleuser/triton'
 
     # Create the module_tf
     module_tf = spawner._build_tf_module()
@@ -59,7 +59,7 @@ def test_start(spawner):
 
     ip, port = f.result()
     assert port == 8888
-    assert ip == "127.0.0.1"
+    assert ip == '127.0.0.1'
 
 
 def test_stop(spawner):
