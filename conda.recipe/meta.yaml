@@ -30,6 +30,7 @@ test:
   requires:
     - pytest
     - pytest-cov
+    - pytest-asyncio
   commands:
     - pytest -v --color=yes tests
 

@@ -1,5 +1,6 @@
 import os
-from subprocess import check_call, check_output
+from asyncio.subprocess import create_subprocess_exec
+from subprocess import check_call, check_output, CalledProcessError
 
 from jinja2 import Environment, PackageLoader
 from jupyterhub.spawner import Spawner
@@ -50,7 +51,7 @@ class TerraformSpawner(Spawner):
         self._write_tf_module()
 
         # (Re)Initialize Terraform
-        self.tf_init()
+        yield self.tf_init()
 
         # Terraform Apply (locally)
         self.tf_apply()
@@ -120,6 +121,20 @@ class TerraformSpawner(Spawner):
         tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
         return tf_template.render(spawner=self)
 
+    @gen.coroutine
+    def tf_check_call(self, *args, **kwargs):
+        proc = yield from create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
+        yield from proc.wait()
+        if proc.returncode != 0:
+            raise CalledProcessError(proc.returncode, self.tf_bin)
+
+    @gen.coroutine
+    def tf_init(self):
+        """
+        Initialize the Terraform directory
+        """
+        yield from self.tf_check_call('init', limit=1024*10)
+
     def tf_apply(self):
         module_id = self.get_module_id()
         check_call([self.tf_bin, 'apply', '-auto-approve',
@@ -128,13 +143,6 @@ class TerraformSpawner(Spawner):
     def tf_refresh(self):
         check_call([self.tf_bin, 'refresh' ], cwd=self.tf_dir)
 
-    def tf_init(self):
-        """
-        (Re)Initialize Terraform
-
-        :return:
-        """
-        check_call([self.tf_bin, 'init'], cwd=self.tf_dir)
 
     def tf_output(self, variable):
         """

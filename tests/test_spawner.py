@@ -51,35 +51,31 @@ def test__write_tf_module(spawner):
         assert tf_module == f.read()
 
 
+@pytest.mark.asyncio
 def test_start(spawner):
-    f = spawner.start()
-
-    assert f.done()
+    # noinspection PyTupleAssignmentBalance
+    (ip, port) = yield from spawner.start()
     assert os.path.exists(spawner.get_module_file())
-
-    ip, port = f.result()
     assert port == 8888
     assert ip == '127.0.0.1'
 
 
+@pytest.mark.asyncio
 def test_stop(spawner):
-    spawner.start().result()
+    yield from spawner.start()
 
-    assert os.path.exists(spawner.get_module_file())
-
-    spawner.stop()
-
+    yield from spawner.stop()
     assert not os.path.exists(spawner.get_module_file())
 
 
+@pytest.mark.asyncio
 def test_poll(spawner):
     # If poll is called before start, the state is unknown
-    state = spawner.poll().result()
+    state = yield from spawner.poll()
     assert state == 0
 
     # Now we actually start it
-    spawner.start().result()
+    yield from spawner.start()
 
-    state = spawner.poll().result()
-
+    state = yield from spawner.poll()
     assert state is None
