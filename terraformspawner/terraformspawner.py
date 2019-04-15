@@ -2,7 +2,7 @@ import os
 from asyncio.subprocess import create_subprocess_exec
 from subprocess import check_output, CalledProcessError
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, ChoiceLoader, PackageLoader, FileSystemLoader, PrefixLoader
 from jupyterhub.spawner import Spawner
 from tornado import gen
 from traitlets import Unicode
@@ -22,6 +22,18 @@ class TerraformSpawner(Spawner):
     tf_dir = Unicode(".",
         help="""
         Path to location where the terraform files will be generated.
+        If a directory named "templates" exists under that path then 
+        you can use Jinja Template inheritance to override the templates 
+        used by TerraformSpanwer. 
+        
+        Currently, the only available template is "singleuser.tf" and it
+        can be replaced with a new singleuser.tf file under tf_dir/templates
+        that looks like this
+        
+        {% extends "templates/singleuser.tf" %}
+        {% block safety_valve %}
+        // user defined content ...
+        {% endblock %}
 
         defaults to current working directory.
         """
@@ -34,10 +46,6 @@ class TerraformSpawner(Spawner):
         defaults to sodre/terraform-null-jupyterhub-singleuser module
         """
     ).tag(config=True)
-
-    tf_jinja_env = Environment(
-        loader=PackageLoader("terraformspawner", "templates")
-    )
 
     @gen.coroutine
     def start(self):
@@ -72,7 +80,6 @@ class TerraformSpawner(Spawner):
     def stop(self, now=False):
         """
         """
-        module_id = self.get_module_id()
         module_file = self.get_module_file()
 
         if os.path.exists(module_file):
@@ -99,15 +106,19 @@ class TerraformSpawner(Spawner):
     def get_module_id(self):
         return self.user.escaped_name
 
+    def get_module_dir(self):
+        return os.path.join(self.tf_dir, self.get_module_id())
+
     def get_module_file(self):
-        return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
+        return os.path.join(self.get_module_dir(), "main.tf")
 
     def _write_tf_module(self):
         """
-        Writes the module.tf file to the tf_dir directory.
+        Writes the module.tf file to the module_dir directory.
         :return:
         """
         module_tf_content = self._build_tf_module()
+        os.makedirs(self.get_module_dir(), exist_ok=True)
         with open(self.get_module_file(), 'w') as f:
             f.write(module_tf_content)
 
@@ -117,12 +128,22 @@ class TerraformSpawner(Spawner):
 
         :return: rendered module_tf content
         """
-        tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
+        tf_jinja_env = Environment(
+            loader=ChoiceLoader([
+                PrefixLoader({
+                    'templates': PackageLoader('terraformspawner', 'templates')
+                }),
+                FileSystemLoader(os.path.join(self.tf_dir, 'templates')),
+                PackageLoader('terraformspawner', 'templates'),
+            ])
+        )
+
+        tf_template = tf_jinja_env.get_or_select_template('singleuser.tf')
         return tf_template.render(spawner=self)
 
     @gen.coroutine
     def tf_check_call(self, *args, **kwargs):
-        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
+        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.get_module_dir())
         yield proc.wait()
         if proc.returncode != 0:
             raise CalledProcessError(proc.returncode, self.tf_bin)
@@ -143,4 +164,4 @@ class TerraformSpawner(Spawner):
         """
         module_id = self.get_module_id()
         return check_output([self.tf_bin, 'output', '-module', module_id, variable],
-                            cwd=self.tf_dir).strip().decode('utf-8')
+                            cwd=self.get_module_dir()).strip().decode('utf-8')

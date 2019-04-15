@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 from subprocess import CalledProcessError
 from unittest.mock import Mock
@@ -43,6 +44,22 @@ def test__build_tf_module(spawner):
     assert 'JUPYTERHUB_API_TOKEN' in module_tf
 
 
+def test__build_tf_module_inheritance(spawner):
+    # Create Inherited template
+    user_template_dir = os.path.join(spawner.tf_dir, "templates")
+    src_inherited_template = os.path.join(os.path.dirname(__file__), 'templates', 'singleuser_inheritance.tf')
+    dst_inherited_template = os.path.join(user_template_dir, 'singleuser.tf')
+
+    # Copy the src template to the destination
+    os.makedirs(user_template_dir)
+    shutil.copyfile(src_inherited_template, dst_inherited_template)
+
+    # Create the module_tf
+    module_tf = spawner._build_tf_module()
+
+    assert 'this is from pytest' in module_tf
+
+
 def test__write_tf_module(spawner):
     tf_module = spawner._build_tf_module()
 
@@ -50,6 +67,7 @@ def test__write_tf_module(spawner):
 
     with open(spawner.get_module_file()) as f:
         assert tf_module == f.read()
+
 
 @pytest.mark.asyncio
 def test_tf_check_call(spawner):
