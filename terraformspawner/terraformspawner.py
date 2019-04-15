@@ -2,7 +2,7 @@ import os
 from asyncio.subprocess import create_subprocess_exec
 from subprocess import check_output, CalledProcessError
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, ChoiceLoader, PackageLoader, FileSystemLoader, PrefixLoader
 from jupyterhub.spawner import Spawner
 from tornado import gen
 from traitlets import Unicode
@@ -22,6 +22,18 @@ class TerraformSpawner(Spawner):
     tf_dir = Unicode(".",
         help="""
         Path to location where the terraform files will be generated.
+        If a directory named "templates" exists under that path then 
+        you can use Jinja Template inheritance to override the templates 
+        used by TerraformSpanwer. 
+        
+        Currently, the only available template is "singleuser.tf" and it
+        can be replaced with a new singleuser.tf file under tf_dir/templates
+        that looks like this
+        
+        {% extends "templates/singleuser.tf" %}
+        {% block safety_valve %}
+        // user defined content ...
+        {% endblock %}
 
         defaults to current working directory.
         """
@@ -34,10 +46,6 @@ class TerraformSpawner(Spawner):
         defaults to sodre/terraform-null-jupyterhub-singleuser module
         """
     ).tag(config=True)
-
-    tf_jinja_env = Environment(
-        loader=PackageLoader("terraformspawner", "templates")
-    )
 
     @gen.coroutine
     def start(self):
@@ -72,7 +80,6 @@ class TerraformSpawner(Spawner):
     def stop(self, now=False):
         """
         """
-        module_id = self.get_module_id()
         module_file = self.get_module_file()
 
         if os.path.exists(module_file):
@@ -117,7 +124,17 @@ class TerraformSpawner(Spawner):
 
         :return: rendered module_tf content
         """
-        tf_template = self.tf_jinja_env.get_or_select_template('single_user.tf')
+        tf_jinja_env = Environment(
+            loader=ChoiceLoader([
+                PrefixLoader({
+                    'templates': PackageLoader('terraformspawner', 'templates')
+                }),
+                FileSystemLoader(os.path.join(self.tf_dir, 'templates')),
+                PackageLoader('terraformspawner', 'templates'),
+            ])
+        )
+
+        tf_template = tf_jinja_env.get_or_select_template('singleuser.tf')
         return tf_template.render(spawner=self)
 
     @gen.coroutine
