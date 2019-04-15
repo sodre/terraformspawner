@@ -106,15 +106,19 @@ class TerraformSpawner(Spawner):
     def get_module_id(self):
         return self.user.escaped_name
 
+    def get_module_dir(self):
+        return os.path.join(self.tf_dir, self.get_module_id())
+
     def get_module_file(self):
-        return os.path.join(self.tf_dir, self.get_module_id() + ".tf")
+        return os.path.join(self.get_module_dir(), "main.tf")
 
     def _write_tf_module(self):
         """
-        Writes the module.tf file to the tf_dir directory.
+        Writes the module.tf file to the module_dir directory.
         :return:
         """
         module_tf_content = self._build_tf_module()
+        os.makedirs(self.get_module_dir(), exist_ok=True)
         with open(self.get_module_file(), 'w') as f:
             f.write(module_tf_content)
 
@@ -139,7 +143,7 @@ class TerraformSpawner(Spawner):
 
     @gen.coroutine
     def tf_check_call(self, *args, **kwargs):
-        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.tf_dir)
+        proc = yield create_subprocess_exec(self.tf_bin, *args, **kwargs, cwd=self.get_module_dir())
         yield proc.wait()
         if proc.returncode != 0:
             raise CalledProcessError(proc.returncode, self.tf_bin)
@@ -160,4 +164,4 @@ class TerraformSpawner(Spawner):
         """
         module_id = self.get_module_id()
         return check_output([self.tf_bin, 'output', '-module', module_id, variable],
-                            cwd=self.tf_dir).strip().decode('utf-8')
+                            cwd=self.get_module_dir()).strip().decode('utf-8')
