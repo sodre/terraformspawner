@@ -8,7 +8,7 @@
 // TerraformSpawner configured module
 module "{{ spawner.get_module_id() }}" {
   {% block module_source %}
-  source = "{{ spawner.tf_module }}"
+  source = "{{ spawner.tf_module_source }}"
   {% endblock %}
   {% block module_variables %}
   env = {

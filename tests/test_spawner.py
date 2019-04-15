@@ -25,20 +25,20 @@ def spawner(tmpdir):
     rv = TerraformSpawner(hub=Hub(), user=MockUser())
     rv.tf_bin = os.path.join(sys.base_exec_prefix, 'bin', 'terraform')
     rv.tf_dir = tmpdir.dirname
-    rv.tf_module = os.path.join(os.path.dirname(__file__), 'terraform-mock-jupyterhub-singleuser')
+    rv.tf_module_source = os.path.join(os.path.dirname(__file__), 'terraform-mock-jupyterhub-singleuser')
 
     return rv
 
 
 def test__build_tf_module(spawner):
     # Configure Spawner
-    spawner.tf_module = 'sodre/jupyterhub-singleuser/triton'
+    spawner.tf_module_source = 'sodre/jupyterhub-singleuser/triton'
 
     # Create the module_tf
     module_tf = spawner._build_tf_module()
 
     # Check it contains some of the expected data
-    assert spawner.tf_module in module_tf
+    assert spawner.tf_module_source in module_tf
     assert spawner.get_module_id() in module_tf
 
     assert 'JUPYTERHUB_API_TOKEN' in module_tf

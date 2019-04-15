@@ -39,7 +39,7 @@ class TerraformSpawner(Spawner):
         """
     ).tag(config=True)
 
-    tf_module = Unicode('sodre/jupyterhub-singleuser/null',
+    tf_module_source = Unicode('sodre/jupyterhub-singleuser/null',
         help="""
         The Terraform Module name for the Spawner
 
