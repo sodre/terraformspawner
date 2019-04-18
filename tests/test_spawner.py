@@ -105,3 +105,9 @@ def test_poll(spawner):
 
     state = yield from spawner.poll()
     assert state is None
+
+
+@pytest.mark.asyncio
+def test_tf_workspace(spawner):
+    spawner.tf_workspace = "test"
+    yield from spawner.start()
