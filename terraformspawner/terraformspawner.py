@@ -39,6 +39,14 @@ class TerraformSpawner(Spawner):
         """
     ).tag(config=True)
 
+    tf_workspace = Unicode('default',
+        help="""
+        The Terraform workspace
+        
+        defaults to `default`
+        """
+    )
+
     tf_module_source = Unicode('sodre/jupyterhub-singleuser/null',
         help="""
         The Terraform Module name for the Spawner
@@ -60,6 +68,12 @@ class TerraformSpawner(Spawner):
 
         # (Re)Initialize Terraform
         yield self.tf_check_call('init')
+
+        # Select the Workspace
+        try:
+            yield self.tf_check_call('workspace', 'select', self.tf_workspace)
+        except CalledProcessError as e:
+            yield self.tf_check_call('workspace', 'new', self.tf_workspace)
 
         # Terraform Apply (locally)
         yield self.tf_apply()
